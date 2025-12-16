@@ -1,0 +1,236 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+
+enum Role {
+  ADMIN
+  TRAINER
+  STAFF
+  MEMBER
+}
+
+enum ScheduleType {
+  WITH_TRAINER
+  SELF_PRACTICE
+}
+
+enum PlanCategory {
+  GYM
+  CLASS
+  POOL
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+  OVERDUE
+}
+
+enum EquipmentStatus {
+  GOOD
+  MAINTENANCE
+  BROKEN
+}
+
+// --- MODELS ---
+
+// 1. User
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          Role      @default(MEMBER)
+
+  phone         String?
+  address       String?
+  bio           String?
+  avatar        String?
+  gender        String?
+  dateOfBirth   DateTime?
+
+  totalHours    Float     @default(0)
+  totalCheckIns Int       @default(0)
+  currentStreak Int       @default(0)
+  lastCheckIn   DateTime?
+
+  // Relations
+  checkIns        CheckIn[]
+  schedules       WorkoutSchedule[]
+  bodyMetrics     BodyMetric[]
+  subscriptions   Subscription[]
+  paymentMethods  PaymentMethod[]
+  invoices        Invoice[]
+  feedbacks       Feedback[]
+  staffKPIs       StaffKPI[]
+
+  emailVerified     DateTime?
+  verificationToken String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// 2. Check-in
+model CheckIn {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  checkInAt  DateTime  @default(now())
+  checkOutAt DateTime?
+}
+
+// 3. Plan
+model Plan {
+  id            String        @id @default(uuid())
+  name          String
+  price         Float
+  unit          String
+  desc          String
+  features      String[]
+  highlight     Boolean       @default(false)
+
+  image         String?
+  tag           String?
+  category      PlanCategory  @default(GYM)
+  durationDays  Int           @default(30)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  subscriptions Subscription[]
+}
+
+// 4. Subscription
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id])
+
+  startDate DateTime @default(now())
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  autoRenew Boolean  @default(true)
+
+  invoices  Invoice[]
+}
+
+// 5. Invoice
+model Invoice {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+
+  amount         Float
+  status         InvoiceStatus @default(PENDING)
+  dueDate        DateTime
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+}
+
+// 6. PaymentMethod
+model PaymentMethod {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  cardLast4  String
+  cardBrand  String
+  holderName String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+// 7. WorkoutSchedule
+model WorkoutSchedule {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  title       String
+  date        DateTime
+  type        ScheduleType @default(SELF_PRACTICE)
+  trainerName String?
+  isCompleted Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+}
+
+// 8. BodyMetric
+model BodyMetric {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  height     Float
+  weight     Float
+  bmi        Float
+  recordedAt DateTime @default(now())
+}
+
+// 9. Feedback
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  title     String
+  message   String
+  reply     String?
+  status    String   @default("PENDING")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 10. Room
+model Room {
+  id          String              @id @default(uuid())
+  name        String
+  categories  EquipmentCategory[]
+}
+
+// 11. EquipmentCategory
+model EquipmentCategory {
+  id      String      @id @default(uuid())
+  name    String
+  roomId  String
+  room    Room        @relation(fields: [roomId], references: [id])
+  items   Equipment[]
+}
+
+// 12. Equipment
+model Equipment {
+  id              String            @id @default(uuid())
+  code            String
+  image           String?
+  status          EquipmentStatus   @default(GOOD)
+  lastMaintained  DateTime?
+  categoryId      String
+  category        EquipmentCategory @relation(fields: [categoryId], references: [id])
+}
+
+// 13. Staff KPI
+model StaffKPI {
+  id        String   @id @default(uuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  month     DateTime
+  kpiScore  Float
+  sessions  Int
+  notes     String?
+
+  @@unique([userId, month])
+}
