@@ -1,23 +1,36 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google"; // Dùng Inter thay cho Geist để tránh lỗi build
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeProvider";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Cấu hình font Inter
+const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = { title: "Gym Master", description: "Hệ thống phòng tập" };
+export const metadata: Metadata = {
+  title: "Gym Master",
+  description: "Hệ thống phòng tập",
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      {/* Áp dụng class của font Inter vào body */}
+      <body className={`${inter.className} antialiased`}>
         <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-             {/* Chỉ render children, Sidebar sẽ nằm ở layout con */}
-             {children}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {/* Chỉ render children, Sidebar sẽ nằm ở layout con */}
+            {children}
           </ThemeProvider>
         </AuthProvider>
       </body>
