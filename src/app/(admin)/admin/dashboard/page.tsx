@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { Users, DollarSign, Activity, TrendingUp, Calendar, Loader2 } from 'lucide-react';
 // Import các Interface từ file action của bạn
-import { getDashboardStats, DashboardStats, RecentTransaction, ChartDataPoint } from '@/actions/dashboard';
+import { getDashboardStats, DashboardStats, RecentTransaction } from '@/actions/dashboard';
 
 export default function AdminDashboardPage() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -15,7 +15,7 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Danh sách năm để chọn (có thể mở rộng)
+  // Danh sách năm để chọn (có thể mở rộng logic tự động)
   const years: number[] = [2023, 2024, 2025];
 
   useEffect(() => {
@@ -58,22 +58,29 @@ export default function AdminDashboardPage() {
         
         <div className="flex items-center gap-2 bg-white dark:bg-card p-2 rounded-xl border shadow-sm">
           <Calendar size={18} className="text-gray-400 ml-1" />
+          
+          {/* SELECT NĂM: Thêm dark:text-white */}
           <select 
             value={year} 
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setYear(Number(e.target.value))}
-            className="bg-transparent text-sm font-semibold outline-none cursor-pointer"
+            className="bg-transparent text-sm font-semibold outline-none cursor-pointer text-gray-900 dark:text-white"
           >
-            {years.map((y) => <option key={y} value={y}>Năm {y}</option>)}
+            {years.map((y) => (
+                <option key={y} value={y} className="text-black">Năm {y}</option>
+            ))}
           </select>
+
           <div className="h-4 w-[1px] bg-gray-300 mx-1" />
+
+          {/* SELECT THÁNG: Thêm dark:text-white */}
           <select 
             value={month || ""} 
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMonth(e.target.value ? Number(e.target.value) : undefined)}
-            className="bg-transparent text-sm font-semibold outline-none cursor-pointer"
+            className="bg-transparent text-sm font-semibold outline-none cursor-pointer text-gray-900 dark:text-white"
           >
-            <option value="">Cả năm</option>
+            <option value="" className="text-black">Cả năm</option>
             {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>Tháng {i + 1}</option>
+              <option key={i + 1} value={i + 1} className="text-black">Tháng {i + 1}</option>
             ))}
           </select>
         </div>
