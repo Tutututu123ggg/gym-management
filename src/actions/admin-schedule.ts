@@ -3,7 +3,7 @@
 import prisma from '@/lib/prisma';
 import { addDays } from 'date-fns';
 import { revalidatePath } from "next/cache";
-
+import { Prisma } from "@prisma/client";
 // 1. Lấy Resource (Sửa lại: Lấy GymClass thay vì Plan)
 export async function getScheduleResources() {
   try {
