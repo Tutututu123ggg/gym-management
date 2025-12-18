@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { format, differenceInDays } from 'date-fns';
+import { useRouter } from 'next/navigation';
 import { 
   getBillingData, 
   addPaymentMethod, 
@@ -73,7 +74,16 @@ const getEmptyRows = (currentCount: number, maxPerPage: number) => {
 };
 
 export default function BillingPage() {
-  const { user } = useAuth();
+  const { isLoggedIn, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Nếu chưa đăng nhập -> Đá về trang chủ (hoặc mở modal login)
+    if (!isLoggedIn) {
+      router.push('/'); 
+    }
+  }, [isLoggedIn, router]);
+  //const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   
   const [data, setData] = useState<BillingData>({ subscriptions: [], paymentMethods: [], invoices: [] });
@@ -215,6 +225,10 @@ export default function BillingPage() {
   const SUB_ITEM_HEIGHT = "md:h-[100px]";
   const PAY_ITEM_HEIGHT = "h-[60px]";
   const HIST_ITEM_HEIGHT = "h-[65px]";
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   return (
     <div className="p-6 space-y-8 bg-slate-50 dark:bg-background min-h-screen text-foreground relative">

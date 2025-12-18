@@ -66,9 +66,7 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
           if (res.user.role === 'ADMIN') {
             router.push('/admin/dashboard'); 
           } else {
-            // Nếu muốn User thường cũng về trang dashboard riêng thì sửa ở đây
-            // router.push('/dashboard'); 
-            router.refresh(); // Làm mới trang để cập nhật UI header
+            router.push('/progress');  // Làm mới trang để cập nhật UI header
           }
 
         } else {

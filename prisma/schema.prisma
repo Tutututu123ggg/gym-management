@@ -42,6 +42,13 @@ enum EquipmentStatus {
   BROKEN
 }
 
+enum BookingStatus {
+  BOOKED
+  CHECKED_IN
+  CANCELLED
+  NO_SHOW
+}
+
 // --- MODELS ---
 
 // 1. User
@@ -51,6 +58,9 @@ model User {
   name          String?
   password      String
   role          Role      @default(MEMBER)
+  
+  // Phân loại phòng ban
+  department    String?   
 
   phone         String?
   address       String?
@@ -59,20 +69,25 @@ model User {
   gender        String?
   dateOfBirth   DateTime?
 
+  // Stats
   totalHours    Float     @default(0)
   totalCheckIns Int       @default(0)
   currentStreak Int       @default(0)
   lastCheckIn   DateTime?
 
   // Relations
-  checkIns        CheckIn[]
-  schedules       WorkoutSchedule[]
-  bodyMetrics     BodyMetric[]
-  subscriptions   Subscription[]
-  paymentMethods  PaymentMethod[]
-  invoices        Invoice[]
-  feedbacks       Feedback[]
-  staffKPIs       StaffKPI[]
+  checkIns      CheckIn[]
+  schedules     WorkoutSchedule[]
+  bodyMetrics   BodyMetric[]
+  subscriptions Subscription[]
+  paymentMethods PaymentMethod[]
+  invoices      Invoice[]
+  feedbacks     Feedback[]
+  staffKPIs     StaffKPI[]
+  
+  // Quan hệ cho tính năng Lịch học
+  taughtClasses ClassSession[] @relation("TrainerClasses")
+  bookings      Booking[]      
 
   emailVerified     DateTime?
   verificationToken String?
@@ -89,44 +104,63 @@ model CheckIn {
   checkOutAt DateTime?
 }
 
-// 3. Plan
+// 3. Plan (Gói bán - Level 1)
 model Plan {
-  id            String        @id @default(uuid())
-  name          String
-  price         Float
-  unit          String
-  desc          String
-  features      String[]
-  highlight     Boolean       @default(false)
+  id           String        @id @default(uuid())
+  name         String        
+  price        Float
+  unit         String        
+  desc         String?
+  isActive     Boolean       @default(true)
+  category     PlanCategory  @default(GYM)
+  durationDays Int           @default(30)
 
-  image         String?
-  tag           String?
-  category      PlanCategory  @default(GYM)
-  durationDays  Int           @default(30)
+  // 👇 [KHÔI PHỤC] Các trường cũ để tránh mất dữ liệu
+  features     String[]      
+  highlight    Boolean       @default(false)
+  image        String?
+  tag          String?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   subscriptions Subscription[]
+  promotions    Promotion[]
+  gymClasses    GymClass[]    
 }
 
-// 4. Subscription
-model Subscription {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  planId    String
-  plan      Plan     @relation(fields: [planId], references: [id])
+// 4. GymClass (Lớp môn - Level 2)
+model GymClass {
+  id          String   @id @default(uuid())
+  name        String   
+  description String?
+  
+  planId      String
+  plan        Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
 
-  startDate DateTime @default(now())
+  sessions    ClassSession[] 
+
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// 5. Subscription
+model Subscription {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  planId    String
+  plan      Plan      @relation(fields: [planId], references: [id])
+
+  startDate DateTime  @default(now())
   endDate   DateTime
-  isActive  Boolean  @default(true)
-  autoRenew Boolean  @default(true)
+  isActive  Boolean   @default(true)
+  autoRenew Boolean   @default(true)
 
   invoices  Invoice[]
 }
 
-// 5. Invoice
+// 6. Invoice
 model Invoice {
   id             String        @id @default(uuid())
   userId         String
@@ -141,7 +175,7 @@ model Invoice {
   createdAt      DateTime      @default(now())
 }
 
-// 6. PaymentMethod
+// 7. PaymentMethod
 model PaymentMethod {
   id         String   @id @default(uuid())
   userId     String
@@ -154,7 +188,7 @@ model PaymentMethod {
   createdAt  DateTime @default(now())
 }
 
-// 7. WorkoutSchedule
+// 8. WorkoutSchedule
 model WorkoutSchedule {
   id          String       @id @default(uuid())
   userId      String
@@ -167,7 +201,7 @@ model WorkoutSchedule {
   createdAt   DateTime     @default(now())
 }
 
-// 8. BodyMetric
+// 9. BodyMetric
 model BodyMetric {
   id         String   @id @default(uuid())
   userId     String
@@ -178,7 +212,7 @@ model BodyMetric {
   recordedAt DateTime @default(now())
 }
 
-// 9. Feedback
+// 10. Feedback
 model Feedback {
   id        String   @id @default(uuid())
   userId    String
@@ -193,44 +227,100 @@ model Feedback {
   updatedAt DateTime @updatedAt
 }
 
-// 10. Room
+// 11. Room
 model Room {
-  id          String              @id @default(uuid())
-  name        String
-  categories  EquipmentCategory[]
+  id            String              @id @default(uuid())
+  name          String
+  categories    EquipmentCategory[]
+  classSessions ClassSession[] 
 }
 
-// 11. EquipmentCategory
+// 12. EquipmentCategory
 model EquipmentCategory {
-  id      String      @id @default(uuid())
-  name    String
-  roomId  String
-  room    Room        @relation(fields: [roomId], references: [id])
-  items   Equipment[]
+  id     String      @id @default(uuid())
+  name   String
+  roomId String
+  room   Room        @relation(fields: [roomId], references: [id])
+  items  Equipment[]
 }
 
-// 12. Equipment
+// 13. Equipment
 model Equipment {
-  id              String            @id @default(uuid())
-  code            String
-  image           String?
-  status          EquipmentStatus   @default(GOOD)
-  lastMaintained  DateTime?
-  categoryId      String
-  category        EquipmentCategory @relation(fields: [categoryId], references: [id])
+  id             String          @id @default(uuid())
+  code           String          
+  name           String?         
+  image          String?
+  status         EquipmentStatus @default(GOOD)
+  lastMaintained DateTime?
+  categoryId     String
+  category       EquipmentCategory @relation(fields: [categoryId], references: [id])
+  description    String?   
+  origin         String?   
+  purchaseDate   DateTime? 
 }
 
-// 13. Staff KPI
+// 14. Staff KPI
 model StaffKPI {
   id        String   @id @default(uuid())
-
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-
-  month     DateTime
-  kpiScore  Float
-  sessions  Int
+  month     DateTime 
+  kpiScore  Float    
+  sessions  Int      
   notes     String?
-
+  bonus     Float    @default(0) // Lưu tiền thưởng (VND)
   @@unique([userId, month])
+}
+
+// 15. Promotion
+model Promotion {
+  id          String    @id @default(uuid())
+  name        String    
+  salePrice   Float     
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean   @default(true)
+
+  planId      String
+  plan        Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+}
+
+// 16. ClassSession (Buổi học trên lịch - Level 3)
+model ClassSession {
+  id          String   @id @default(uuid())
+  
+  gymClassId  String
+  gymClass    GymClass @relation(fields: [gymClassId], references: [id], onDelete: Cascade)
+
+  trainerId   String?
+  trainer     User?    @relation("TrainerClasses", fields: [trainerId], references: [id])
+
+  roomId      String?
+  room        Room?    @relation(fields: [roomId], references: [id])
+
+  startTime   DateTime
+  endTime     DateTime
+  maxCapacity Int      @default(20)
+  isCanceled  Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  bookings    Booking[]
+}
+
+// 17. Booking (Đặt chỗ)
+model Booking {
+  id             String        @id @default(uuid())
+  
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  
+  classSessionId String
+  classSession   ClassSession  @relation(fields: [classSessionId], references: [id])
+
+  status         BookingStatus @default(BOOKED) 
+  bookedAt       DateTime      @default(now())
+
+  @@unique([userId, classSessionId]) 
 }

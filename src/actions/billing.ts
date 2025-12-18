@@ -1,11 +1,9 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { addDays } from 'date-fns'
+import prisma  from '@/lib/prisma'
 
-// Khởi tạo Prisma Client (Lưu ý: Trong dev mode Next.js nên dùng Singleton pattern để tránh lỗi connection limit, nhưng code này vẫn chạy ổn)
-const prisma = new PrismaClient()
 
 // 1. Lấy dữ liệu trang Billing (GIỮ NGUYÊN)
 export async function getBillingData(userId: string) {

@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { toggleCheckIn, getDashboardData, addSchedule, addBodyMetric, toggleScheduleStatus } from '@/actions/progress';
 import WeeklyCalendar from '@/components/WeeklyCalendar'; 
+import { useRouter } from 'next/navigation';
 
 // --- 1. DEFINITIONS ---
 interface UserStats {
@@ -70,10 +71,16 @@ const Icons = {
 };
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
-
+  const router = useRouter();
+    useEffect(() => {
+      // Nếu chưa đăng nhập -> Đá về trang chủ (hoặc mở modal login)
+      if (!isLoggedIn) {
+        router.push('/'); 
+      }
+    }, [isLoggedIn, router]);
   // Modal State
   const [isMetricModalOpen, setIsMetricModalOpen] = useState(false);
   const [metricForm, setMetricForm] = useState({ height: '', weight: '' });
@@ -173,7 +180,9 @@ export default function DashboardPage() {
       await toggleScheduleStatus(id, status);
       reloadData();
   }
-
+  if (!isLoggedIn) {
+    return null; // Hoặc return <LoadingSpinner />
+  }
   // --- RENDER UI ---
   return (
     <div className="p-6 space-y-6 bg-slate-50 dark:bg-background min-h-screen text-foreground relative">

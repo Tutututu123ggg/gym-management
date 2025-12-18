@@ -1,10 +1,9 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { differenceInCalendarDays, subDays } from 'date-fns' // Cần import subDays
 
-const prisma = new PrismaClient()
+import prisma  from '@/lib/prisma'
 
 // --- CHECK IN / CHECK OUT LOGIC ---
 export async function toggleCheckIn(userId: string) {

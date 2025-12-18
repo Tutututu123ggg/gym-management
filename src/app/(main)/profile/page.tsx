@@ -13,10 +13,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserProfile, updateUserProfile } from '@/actions/profile';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-  const { user, login } = useAuth();
-  
+  const { user, login, isLoggedIn } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    // Nếu chưa đăng nhập -> Đá về trang chủ (hoặc mở modal login)
+    if (!isLoggedIn) {
+      router.push('/'); 
+    }
+  }, [isLoggedIn, router]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -92,7 +99,12 @@ export default function ProfilePage() {
       <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
+  
 
+  // Trong lúc chờ kiểm tra hoặc nếu chưa login thì không render nội dung nhạy cảm
+  if (!isLoggedIn) {
+    return null; // Hoặc return <LoadingSpinner />
+  }
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 animate-fade-in-up">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Hồ Sơ Của Tôi</h1>

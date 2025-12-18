@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { sendFeedback, getMyFeedbacks } from '@/actions/feedback';
+import { useRouter } from 'next/navigation';
 
 // --- TYPES ---
 interface FeedbackItem {
@@ -24,16 +25,25 @@ const Icons = {
 };
 
 export default function FeedbackPage() {
-  const { user } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   // 👇 FIX 1: Lấy userId ra biến riêng (Primitive string) để React dễ so sánh hơn là Object
   const userId = user?.id;
 
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const router = useRouter();
+  useEffect(() => {
+    // Nếu chưa đăng nhập -> Đá về trang chủ (hoặc mở modal login)
+    if (!isLoggedIn) {
+      router.push('/'); 
+    }
+  }, [isLoggedIn, router]);
+
+  // Trong lúc chờ kiểm tra hoặc nếu chưa login thì không render nội dung nhạy cảm
   
   const [formData, setFormData] = useState({ title: '', message: '' });
-
+  
   // 👇 FIX 2: Dùng useCallback chuẩn với dependency là userId
   // Chỉ khi 'userId' thay đổi thì hàm này mới được tạo lại
   const loadFeedbacks = useCallback(async () => {
@@ -72,7 +82,9 @@ export default function FeedbackPage() {
     }
     setIsSending(false);
   };
-
+  if (!isLoggedIn) {
+    return null; 
+  }
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-slate-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">

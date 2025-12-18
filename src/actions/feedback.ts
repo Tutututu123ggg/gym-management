@@ -1,9 +1,8 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
-import { revalidatePath } from 'next/cache'
 
-const prisma = new PrismaClient()
+import { revalidatePath } from 'next/cache'
+import prisma  from '@/lib/prisma'
 
 // 1. Gửi phản hồi mới
 export async function sendFeedback(userId: string, data: { title: string, message: string }) {

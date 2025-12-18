@@ -1,18 +1,33 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Plan } from '@prisma/client';
 import { useRouter } from 'next/navigation'; 
 import { useAuth } from '@/context/AuthContext'; 
 import { subscribeToPlan } from '@/actions/billing'; 
+// Import icon Sale
+import { Percent } from 'lucide-react';
 
 const headerBg = "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop";
 
-// --- INTERFACES ---
+// --- INTERFACES (Cập nhật để nhận Promotion) ---
+
+interface Promotion {
+  id: string;
+  name: string;
+  salePrice: number;
+  startDate: Date | string;
+  endDate: Date | string;
+}
+
+// Mở rộng Plan gốc
+type PlanWithPromo = Plan & {
+  promotions?: Promotion[];
+};
 
 interface PlansClientProps {
-  allPlans: Plan[];
+  allPlans: PlanWithPromo[];
 }
 
 interface TabButtonProps {
@@ -24,7 +39,7 @@ interface TabButtonProps {
 }
 
 interface PricingCardProps {
-  data: Plan;
+  data: PlanWithPromo;
   isClass: boolean;
   activeTab: string;
   onRegister: (planId: string) => void;
@@ -39,19 +54,16 @@ export default function PlansClient({ allPlans = [] }: PlansClientProps) {
   
   const [activeTab, setActiveTab] = useState<string>('GYM');
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  // State điều khiển Modal Đăng nhập
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const currentPlans = allPlans.filter(p => p.category === activeTab);
 
   const handleRegister = async (planId: string) => {
-    // 1. Kiểm tra đăng nhập: Nếu chưa có user -> Hiện Modal
     if (!user) {
         setShowLoginModal(true);
         return;
     }
 
-    // 2. Logic đăng ký cũ
     setLoadingId(planId); 
     try {
         const res = await subscribeToPlan(user.id, planId);
@@ -159,7 +171,6 @@ export default function PlansClient({ allPlans = [] }: PlansClientProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl p-6 relative animate-in zoom-in-95 border border-gray-200 dark:border-gray-700">
              
-             {/* Nút đóng */}
              <button 
                 onClick={() => setShowLoginModal(false)}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
@@ -172,7 +183,6 @@ export default function PlansClient({ allPlans = [] }: PlansClientProps) {
                 <p className="text-gray-500 text-sm mt-1">Vui lòng đăng nhập để tiếp tục đăng ký gói tập.</p>
              </div>
 
-             {/* Form Login Giả lập (Bạn có thể thay bằng form thật) */}
              <div className="space-y-4">
                 <div>
                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email</label>
@@ -184,14 +194,14 @@ export default function PlansClient({ allPlans = [] }: PlansClientProps) {
                 </div>
                 
                 <button 
-                    onClick={() => router.push('/login')} // Chuyển đến trang login đầy đủ nếu muốn
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/30"
+                   onClick={() => router.push('/login')} 
+                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/30"
                 >
-                    Đăng Nhập Ngay
+                   Đăng Nhập Ngay
                 </button>
                 
                 <p className="text-center text-sm text-gray-500 mt-4">
-                    Chưa có tài khoản? <span className="text-blue-600 font-bold cursor-pointer hover:underline" onClick={() => router.push('/register')}>Đăng ký</span>
+                   Chưa có tài khoản? <span className="text-blue-600 font-bold cursor-pointer hover:underline" onClick={() => router.push('/register')}>Đăng ký</span>
                 </p>
              </div>
           </div>
@@ -225,7 +235,21 @@ const TabButton = ({ isActive, onClick, icon, title, desc }: TabButtonProps) => 
 );
 
 const PricingCard = ({ data, isClass, activeTab, onRegister, isLoading }: PricingCardProps) => {
-  const formattedPrice = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.price);
+  // === LOGIC TÍNH TOÁN PROMOTION ===
+  const activePromo = data.promotions?.find(promo => {
+    const now = new Date();
+    const startDate = new Date(promo.startDate);
+    const endDate = new Date(promo.endDate);
+    return now >= startDate && now <= endDate;
+  });
+
+  const currencyFormatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+  const originalPriceFormatted = currencyFormatter.format(data.price);
+  
+  // Giá hiển thị: Nếu có promo thì lấy giá sale, ko thì lấy giá gốc
+  const finalPriceFormatted = activePromo 
+    ? currencyFormatter.format(activePromo.salePrice) 
+    : originalPriceFormatted;
 
   const buttonClass = `
     w-full py-3 rounded-xl font-bold transition-all active:scale-95 flex justify-center items-center gap-2
@@ -246,15 +270,43 @@ const PricingCard = ({ data, isClass, activeTab, onRegister, isLoading }: Pricin
              <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
           )}
           {data.tag && <div className="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase shadow-md">{data.tag}</div>}
+          
+          {/* Badge Sale trên ảnh */}
+          {activePromo && (
+             <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase shadow-md flex items-center gap-1 animate-pulse">
+                <Percent size={12} /> SALE
+             </div>
+          )}
         </div>
         <div className="p-6 flex-1 flex flex-col">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{data.name}</h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 line-clamp-2">{data.desc}</p>
+          
           <div className="mt-auto">
+            {/* --- PHẦN HIỂN THỊ GIÁ --- */}
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formattedPrice}</span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{data.unit}</span>
+               {activePromo ? (
+                   <div className="flex flex-col items-start w-full">
+                       <div className="flex items-center gap-2">
+                           <span className="text-3xl font-extrabold text-red-600 dark:text-red-500">{finalPriceFormatted}</span>
+                           <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                               <Percent size={10} /> -{Math.round(((data.price - activePromo.salePrice)/data.price)*100)}%
+                           </span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                           <span className="text-sm text-gray-400 line-through decoration-gray-400">{originalPriceFormatted}</span>
+                           <span className="text-sm text-gray-500 dark:text-gray-400">{data.unit}</span>
+                       </div>
+                       <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">CT: {activePromo.name}</div>
+                   </div>
+               ) : (
+                   <>
+                       <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{finalPriceFormatted}</span>
+                       <span className="text-sm text-gray-500 dark:text-gray-400">{data.unit}</span>
+                   </>
+               )}
             </div>
+
             <ul className="space-y-2 mb-6">
               {data.features && data.features.slice(0, 2).map((feat, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -290,10 +342,33 @@ const PricingCard = ({ data, isClass, activeTab, onRegister, isLoading }: Pricin
     <div className={`relative p-8 rounded-3xl border flex flex-col transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-700 ${data.highlight ? 'border-blue-500 shadow-xl scale-105 z-10' : 'border-gray-200 hover:shadow-lg hover:-translate-y-1'}`}>
       {data.highlight && <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-4 py-1 rounded-bl-xl rounded-tr-2xl uppercase">Best Seller</div>}
       <h3 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-wide">{data.name}</h3>
-      <div className="mt-4 mb-6">
-        <span className="text-4xl font-extrabold text-blue-600 dark:text-blue-400">{formattedPrice}</span>
-        <span className="text-gray-500 dark:text-gray-400 ml-1">{data.unit}</span>
+      
+      {/* --- PHẦN HIỂN THỊ GIÁ --- */}
+      <div className="mt-4 mb-6 min-h-[80px] flex flex-col justify-center">
+        {activePromo ? (
+            <div className="flex flex-col items-start w-full">
+                <div className="flex items-center gap-2">
+                    <span className="text-4xl font-extrabold text-red-600 dark:text-red-500">{finalPriceFormatted}</span>
+                    <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 animate-pulse">
+                        <Percent size={12} /> SALE
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-gray-400 line-through decoration-gray-400">{originalPriceFormatted}</span>
+                    <span className="text-gray-500 dark:text-gray-400 ml-1">{data.unit}</span>
+                </div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                     CT: {activePromo.name}
+                </div>
+            </div>
+        ) : (
+            <div className="flex items-baseline">
+                <span className="text-4xl font-extrabold text-blue-600 dark:text-blue-400">{finalPriceFormatted}</span>
+                <span className="text-gray-500 dark:text-gray-400 ml-1">{data.unit}</span>
+            </div>
+        )}
       </div>
+
       <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">{data.desc}</p>
       
       <ul className="space-y-4 mb-8 flex-1">

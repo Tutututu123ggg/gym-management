@@ -37,7 +37,6 @@ const AdminSidebar = () => {
     { name: 'Gói tập & Dịch vụ', href: '/admin/plans', icon: CreditCard },
     { name: 'Quản lý Thiết bị', href: '/admin/equipment', icon: Dumbbell },
     { name: 'Phản hồi & CSKH', href: '/admin/feedbacks', icon: MessageSquare },
-    { name: 'Đăng ký tại quầy', href: '/admin/manual-entry', icon: UserPlus },
     { name: 'Nhân sự & KPI', href: '/admin/staff', icon: Briefcase },
   ];
 

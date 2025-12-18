@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-
+import { useRouter } from 'next/navigation';
 import { useSidebar } from '@/context/SidebarContext'; 
 import { useAuth } from '@/context/AuthContext'; 
 import mainGymIcon from '@/assets/main-gym-icon.png'; 
@@ -43,7 +43,7 @@ const Sidebar = () => {
   const { isMobileOpen, toggleMobileSidebar, closeMobileSidebar } = useSidebar();
   const { isLoggedIn, logout, login } = useAuth();
   const pathname = usePathname();
-  
+  const router = useRouter(); // 2. Khởi tạo router
   const { theme, setTheme } = useTheme();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   // Danh sách menu (Giữ nguyên)
@@ -61,6 +61,12 @@ const Sidebar = () => {
     if (item.protected && !isLoggedIn) return false;
     return true;
   });
+
+  const handleLogout = () => {
+    logout();           // Xóa session
+    router.push('/');   // Điều hướng về trang chủ
+    router.refresh();   // (Tùy chọn) Refresh để reset UI sạch sẽ
+  };
 
   return (
     <>
@@ -161,7 +167,7 @@ const Sidebar = () => {
           {/* --- Auth Button --- */}
           {isLoggedIn ? (
             <button 
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full flex items-center hover:bg-destructive/10 text-destructive hover:text-destructive transition-colors relative overflow-hidden whitespace-nowrap px-4 md:px-0 py-3 rounded-md group/logout"
             >
               <span className="md:w-20 md:justify-center flex items-center justify-start shrink-0">
