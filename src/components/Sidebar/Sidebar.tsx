@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useSidebar } from '@/context/SidebarContext'; 
 import { useAuth } from '@/context/AuthContext'; 
 import mainGymIcon from '@/assets/main-gym-icon.png'; 
-import LoginModal from '../LoginModal/LoginModal';
+import LoginModal from '../customer/auth/LoginModal';
 // --- ICONS ---
 type IconComponent = (props?: React.SVGProps<SVGSVGElement>) => React.JSX.Element;
 
@@ -53,7 +53,7 @@ const Sidebar = () => {
     { name: 'Về chúng tôi', icon: <Icons.About />, href: '/about' },
     { name: 'Thông tin cá nhân', icon: <Icons.Profile />, href: '/profile', protected: true },
     { name: 'Tiến độ tập', icon: <Icons.Progress />, href: '/progress', protected: true },
-    { name: 'Thanh toán', icon: <Icons.Payment />, href: '/billing', protected: true },
+    { name: 'Dịch vụ', icon: <Icons.Payment />, href: '/billing', protected: true },
     { name: 'Gửi phản hồi', icon: <Icons.Feedback />, href: '/feedback', protected: true },
   ];
 

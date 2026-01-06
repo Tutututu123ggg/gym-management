@@ -93,6 +93,9 @@ model User {
   verificationToken String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  announcements       Announcement[]
+  staffNotes          StaffNote[]
 }
 
 // 2. Check-in
@@ -323,4 +326,42 @@ model Booking {
   bookedAt       DateTime      @default(now())
 
   @@unique([userId, classSessionId]) 
+}
+
+// --- ENUM MỚI ---
+enum TaskFrequency {
+  ONCE      // Làm 1 lần rồi thôi
+  DAILY     // Lặp lại hàng ngày
+  WEEKLY    // Lặp lại hàng tuần
+  MONTHLY   // Lặp lại hàng tháng
+}
+
+// --- MODELS MỚI ---
+
+// 18. Announcement (Thông báo từ Admin)
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  isActive  Boolean  @default(true) // visible/invisible
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Người tạo (Admin nào viết)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+}
+
+// 19. StaffNote (Ghi chú/Task cá nhân của nhân viên)
+model StaffNote {
+  id        String        @id @default(uuid())
+  content   String
+  isDone    Boolean       @default(false)
+  frequency TaskFrequency @default(ONCE)
+  
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }

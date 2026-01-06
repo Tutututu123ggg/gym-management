@@ -1,5 +1,5 @@
 import React from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminSidebar from '@/components/sidebar/AdminSidebar';
 import { SidebarProvider } from '@/context/SidebarContext';
 
 export const metadata = {

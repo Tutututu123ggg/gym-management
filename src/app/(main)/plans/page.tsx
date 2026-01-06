@@ -1,6 +1,6 @@
 // app/plans/page.tsx
-import { getPlans } from '@/actions/plans'; // Đảm bảo import đúng đường dẫn
-import PlansClient from '@/components/PlansClient';
+import { getPlans } from '@/actions/customer/plans'; // Đảm bảo import đúng đường dẫn
+import PlansClient from '@/components/customer/plans/PlansClient';
 
 export default async function PlansPage() {
   const allPlans = await getPlans();
