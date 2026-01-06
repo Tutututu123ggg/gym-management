@@ -1,5 +1,5 @@
 // src/app/(main)/layout.tsx
-import StaffSidebar from "@/components/sidebar1/StaffSidebar";
+import StaffSidebar from "@/components/sidebar/StaffSidebar";
 import { SidebarProvider } from "@/context/SidebarContext";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
