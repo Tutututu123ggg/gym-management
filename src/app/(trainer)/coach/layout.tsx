@@ -1,6 +1,6 @@
 import React from 'react';
 import { SidebarProvider } from '@/context/SidebarContext'; // Nhớ import SidebarContext
-import TrainerSidebar from '@/components/sidebar/TrainerSidebar';
+import TrainerSidebar from '@/components/sidebar1/TrainerSidebar';
 
 export default function TrainerLayout({ children }: { children: React.ReactNode }) {
   return (
