@@ -24,7 +24,16 @@ export async function POST(request: Request) {
     const filePath = path.join(uploadDir, filename);
     
     await writeFile(filePath, buffer);
-    
+    // Check đuôi file
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      return NextResponse.json({ success: false, message: "Chỉ cho phép upload ảnh!" }, { status: 400 });
+    }
+
+    // Check dung lượng (ví dụ max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ success: false, message: "File quá lớn!" }, { status: 400 });
+    }
     // Trả về đường dẫn ảnh để lưu vào DB
     return NextResponse.json({ 
       success: true, 

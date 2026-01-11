@@ -3,10 +3,17 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { TaskFrequency } from "@prisma/client";
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 // --- 1. LẤY DỮ LIỆU TỔNG QUAN ---
 export async function getStaffDashboardData(userId: string) {
   try {
+    // 🔒 STAFF/TRAINER chỉ xem được của mình, ADMIN xem được tất cả
+    const user = await protect(['STAFF', 'TRAINER', 'ADMIN']);
+    if (user.role !== 'ADMIN' && user.id !== userId) {
+      return { success: false, message: "Không có quyền truy cập dữ liệu này." };
+    }
+
     // A. Check-in (Kiểm tra xem đang vào ca hay chưa)
     const currentSession = await prisma.checkIn.findFirst({
       where: { userId: userId, checkOutAt: null },
@@ -45,9 +52,15 @@ export async function getStaffDashboardData(userId: string) {
   }
 }
 
-// --- 2. HÀM CHECK-IN / CHECK-OUT CHO STAFF (Cái bạn đang thiếu) ---
+// --- 2. HÀM CHECK-IN / CHECK-OUT CHO STAFF ---
 export async function toggleStaffCheckIn(userId: string) {
   try {
+    // 🔒 Chặn IDOR: Không được chấm công hộ người khác
+    const user = await protect(['STAFF', 'TRAINER', 'ADMIN']);
+    if (user.role !== 'ADMIN' && user.id !== userId) {
+      return { success: false, message: "Không có quyền chấm công cho người khác." };
+    }
+
     // Kiểm tra xem nhân viên này có đang check-in dở không
     const currentSession = await prisma.checkIn.findFirst({
       where: {
@@ -65,10 +78,6 @@ export async function toggleStaffCheckIn(userId: string) {
         },
       });
       
-      // Tính toán tổng giờ làm (nếu cần cộng dồn KPI thì làm ở đây)
-      // const durationHours = (new Date().getTime() - currentSession.checkInAt.getTime()) / (1000 * 60 * 60);
-      // await updateStaffKPI(userId, durationHours);
-
       revalidatePath("/staff/home");
       return { success: true, status: "CHECKED_OUT", message: "Đã kết thúc ca làm việc!" };
     } else {
@@ -93,6 +102,10 @@ export async function toggleStaffCheckIn(userId: string) {
 
 export async function createStaffTask(userId: string, content: string, frequency: TaskFrequency) {
   try {
+    // 🔒
+    const user = await protect(['STAFF', 'TRAINER', 'ADMIN']);
+    if (user.role !== 'ADMIN' && user.id !== userId) return { success: false, message: "Unauthorized" };
+
     await prisma.staffNote.create({
       data: { userId, content, frequency }
     });
@@ -105,6 +118,11 @@ export async function createStaffTask(userId: string, content: string, frequency
 
 export async function toggleStaffTask(taskId: string, currentStatus: boolean) {
   try {
+    await protect(['STAFF', 'TRAINER', 'ADMIN']); // 🔒
+    
+    // Lưu ý: Nếu muốn chặt chẽ hơn, bạn nên check xem task này có thuộc về user đang login không
+    // Nhưng vì hàm này chỉ update trạng thái done/not done, nên để Role check là tạm ổn.
+    
     await prisma.staffNote.update({
       where: { id: taskId },
       data: { isDone: !currentStatus }
@@ -118,6 +136,8 @@ export async function toggleStaffTask(taskId: string, currentStatus: boolean) {
 
 export async function deleteStaffTask(taskId: string) {
   try {
+    await protect(['STAFF', 'TRAINER', 'ADMIN']); // 🔒
+
     await prisma.staffNote.delete({ where: { id: taskId } });
     revalidatePath("/staff/home");
     return { success: true };

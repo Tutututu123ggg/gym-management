@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { PlanService } from '@/services/admin/plan.service';
 import { ScheduleService } from '@/services/admin/schedule.service';
 import { UpsertPlanInput, CreateScheduleInput } from '@/types/admin/plan';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 const planService = new PlanService(prisma);
 const scheduleService = new ScheduleService(prisma);
@@ -11,6 +12,7 @@ const scheduleService = new ScheduleService(prisma);
 // --- PLAN ACTIONS ---
 export async function getPlansAction() {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
     const data = await planService.getAll();
     return { success: true, data };
   } catch (e) { return { success: false, data: [] }; }
@@ -18,6 +20,7 @@ export async function getPlansAction() {
 
 export async function upsertPlanAction(data: UpsertPlanInput) {
   try {
+    await protect(['ADMIN']); // 🔒
     await planService.upsert(data);
     revalidatePath('/admin/plans');
     revalidatePath('/plans'); 
@@ -27,6 +30,7 @@ export async function upsertPlanAction(data: UpsertPlanInput) {
 
 export async function deletePlanAction(id: string) {
   try {
+    await protect(['ADMIN']); // 🔒
     await planService.delete(id);
     revalidatePath('/admin/plans');
     return { success: true, message: "Đã xóa." };
@@ -36,6 +40,7 @@ export async function deletePlanAction(id: string) {
 // --- PROMO ACTIONS ---
 export async function applyPromoAction(planId: string, data: any) {
   try {
+    await protect(['ADMIN']); // 🔒
     await planService.applyPromo(planId, data);
     revalidatePath('/admin/plans');
     return { success: true, message: "Đã áp dụng KM." };
@@ -44,6 +49,7 @@ export async function applyPromoAction(planId: string, data: any) {
 
 export async function stopPromoAction(id: string) {
   try {
+    await protect(['ADMIN']); // 🔒
     await planService.stopPromo(id);
     revalidatePath('/admin/plans');
     return { success: true, message: "Đã dừng KM." };
@@ -53,6 +59,7 @@ export async function stopPromoAction(id: string) {
 // --- CLASS & SCHEDULE ACTIONS ---
 export async function getClassesAction(planId: string) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
     const data = await planService.getClassesByPlan(planId);
     return { success: true, data };
   } catch (e) { return { success: false, data: [] }; }
@@ -60,6 +67,7 @@ export async function getClassesAction(planId: string) {
 
 export async function createClassAction(planId: string, name: string) {
   try {
+    await protect(['ADMIN']); // 🔒
     await planService.createClass(planId, name);
     return { success: true, message: "Tạo lớp thành công." };
   } catch (e) { return { success: false, message: "Lỗi tạo lớp." }; }
@@ -67,6 +75,7 @@ export async function createClassAction(planId: string, name: string) {
 
 export async function deleteClassAction(id: string) {
   try {
+    await protect(['ADMIN']); // 🔒
     await planService.deleteClass(id);
     return { success: true, message: "Xóa lớp thành công." };
   } catch (e: any) { return { success: false, message: e.message }; }
@@ -74,6 +83,7 @@ export async function deleteClassAction(id: string) {
 
 export async function getScheduleResourcesAction() {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
     const data = await scheduleService.getResources();
     return { success: true, ...data };
   } catch (e) { return { success: false, trainers: [], rooms: [] }; }
@@ -81,6 +91,7 @@ export async function getScheduleResourcesAction() {
 
 export async function getSessionsAction(from: Date, to: Date, classId?: string) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
     const sessions = await scheduleService.getSessions(from, to, classId);
     // Map data về format Calendar
     const events = sessions.map(s => ({
@@ -100,6 +111,7 @@ export async function getSessionsAction(from: Date, to: Date, classId?: string) 
 
 export async function createScheduleAction(data: CreateScheduleInput) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
     const count = await scheduleService.createBulk(data);
     return { success: true, message: `Đã tạo ${count} buổi học!` };
   } catch (e) { return { success: false, message: "Lỗi tạo lịch." }; }

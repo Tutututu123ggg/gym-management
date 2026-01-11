@@ -4,12 +4,15 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { MemberService } from '@/services/admin/member.service';
 import { CreateMemberInput, UpdateMemberInput, MemberResponse, PaginatedMemberResult } from '@/types/admin/member';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 const memberService = new MemberService(prisma);
 
 // Fetch Members
 export async function getMembersAction(query: string = "", page: number = 1): Promise<MemberResponse<PaginatedMemberResult>> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const limit = 10;
     const { total, data } = await memberService.getAll(query, page, limit);
     
@@ -31,6 +34,8 @@ export async function getMembersAction(query: string = "", page: number = 1): Pr
 // Fetch Plans (Helper for Create Modal)
 export async function getPlansForDropdownAction() {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const plans = await prisma.plan.findMany({
         where: { isActive: true },
         include: { promotions: true }
@@ -44,6 +49,8 @@ export async function getPlansForDropdownAction() {
 // Register
 export async function registerMemberAction(data: CreateMemberInput): Promise<MemberResponse> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const { user, generatedPassword } = await memberService.register(data);
     revalidatePath('/admin/members');
     
@@ -64,6 +71,8 @@ export async function registerMemberAction(data: CreateMemberInput): Promise<Mem
 // Update
 export async function updateMemberAction(id: string, data: UpdateMemberInput): Promise<MemberResponse> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     await memberService.update(id, data);
     revalidatePath('/admin/members');
     return { success: true, message: "Cập nhật thành công!" };
@@ -76,6 +85,8 @@ export async function updateMemberAction(id: string, data: UpdateMemberInput): P
 export async function adminChangePasswordAction(id: string, newPass: string): Promise<MemberResponse> {
   if (newPass.length < 6) return { success: false, message: "Mật khẩu quá ngắn." };
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await memberService.updatePassword(id, newPass);
     revalidatePath('/admin/members');
     return { success: true, message: "Đổi mật khẩu thành công!" };
@@ -87,6 +98,8 @@ export async function adminChangePasswordAction(id: string, newPass: string): Pr
 // Delete
 export async function deleteMemberAction(id: string): Promise<MemberResponse> {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await memberService.delete(id);
     revalidatePath('/admin/members');
     return { success: true, message: "Đã xóa hội viên." };

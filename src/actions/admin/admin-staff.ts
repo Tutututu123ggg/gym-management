@@ -4,11 +4,14 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { StaffService } from '@/services/admin/staff.service';
 import { UpsertKPIParams, StaffActionResult } from '@/types/admin/staff';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 const staffService = new StaffService(prisma);
 
 export async function getStaffKPIsAction(month: Date): Promise<StaffActionResult> {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     const data = await staffService.getStaffKPIs(month);
     return { success: true, data };
   } catch (error) {
@@ -19,6 +22,8 @@ export async function getStaffKPIsAction(month: Date): Promise<StaffActionResult
 
 export async function upsertKPIAction(data: UpsertKPIParams): Promise<{ success: boolean; message: string }> {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await staffService.upsertKPI(data);
     revalidatePath('/admin/staff');
     return { success: true, message: "Đã lưu KPI & Thưởng thành công!" };

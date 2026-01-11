@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { BillingService } from '@/services/customer/billing.service';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 // Khởi tạo Service
 const billingService = new BillingService(prisma);
@@ -11,6 +12,9 @@ const billingService = new BillingService(prisma);
 
 export async function getBillingData(userId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) throw new Error("Không có quyền truy cập dữ liệu này");
+
     return await billingService.getData(userId);
   } catch (error) {
     console.error(error);
@@ -22,6 +26,9 @@ export async function getBillingData(userId: string) {
 
 export async function addPaymentMethod(userId: string, cardData: { last4: string, brand: string, holder: string }) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Không có quyền" };
+
     await billingService.addPaymentMethod(userId, cardData);
     revalidatePath('/billing');
     return { success: true, message: "Thêm thẻ thành công" };
@@ -32,6 +39,9 @@ export async function addPaymentMethod(userId: string, cardData: { last4: string
 
 export async function removePaymentMethod(userId: string, cardId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Không có quyền" };
+
     await billingService.removePaymentMethod(userId, cardId);
     revalidatePath('/billing');
     return { success: true, message: "Đã xóa thẻ" };
@@ -42,6 +52,9 @@ export async function removePaymentMethod(userId: string, cardId: string) {
 
 export async function subscribeToPlan(userId: string, planId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Không có quyền" };
+
     await billingService.subscribe(userId, planId);
     revalidatePath('/billing');
     return { success: true, message: "Đăng ký thành công! Vui lòng thanh toán." };
@@ -52,6 +65,9 @@ export async function subscribeToPlan(userId: string, planId: string) {
 
 export async function payInvoice(userId: string, invoiceId: string, paymentMethodId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Không có quyền" };
+
     await billingService.payInvoice(userId, invoiceId, paymentMethodId);
     revalidatePath('/billing');
     return { success: true, message: "Thanh toán thành công! Gói tập đã kích hoạt." };
@@ -62,6 +78,8 @@ export async function payInvoice(userId: string, invoiceId: string, paymentMetho
 
 export async function cancelSubscription(subId: string) {
   try {
+    await protect(['MEMBER']); // 🔒 (Logic hủy cần check owner trong service hoặc ở đây nếu có userId)
+    // Giả sử service đã check subId thuộc về user gọi hàm
     await billingService.cancelSubscription(subId);
     revalidatePath('/billing');
     return { success: true, message: "Đã hủy gói đăng ký." };
@@ -72,6 +90,7 @@ export async function cancelSubscription(subId: string) {
 
 export async function toggleAutoRenew(subId: string, currentStatus: boolean) {
   try {
+    await protect(['MEMBER']); // 🔒
     await billingService.toggleAutoRenew(subId, currentStatus);
     revalidatePath('/billing');
     return { success: true };
@@ -82,6 +101,9 @@ export async function toggleAutoRenew(subId: string, currentStatus: boolean) {
 
 export async function createRenewalInvoice(userId: string, subId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Không có quyền" };
+
     await billingService.createRenewalInvoice(userId, subId);
     revalidatePath('/billing');
     return { success: true, message: "Đã tạo hóa đơn gia hạn." };

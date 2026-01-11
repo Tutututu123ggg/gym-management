@@ -4,13 +4,17 @@ import prisma from '@/lib/prisma';
 import { addDays } from 'date-fns';
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-// 1. Lấy Resource (Sửa lại: Lấy GymClass thay vì Plan)
+import { protect } from '@/lib/auth-guard'; // [NEW]
+
+// 1. Lấy Resource
 export async function getScheduleResources() {
   try {
+    await protect(['ADMIN', 'STAFF', 'TRAINER']); // 🔒
+
     const [trainers, rooms, gymClasses] = await prisma.$transaction([
       prisma.user.findMany({ where: { role: 'TRAINER' }, select: { id: true, name: true } }),
       prisma.room.findMany({ select: { id: true, name: true } }),
-      prisma.gymClass.findMany({ // 👉 Lấy danh sách Lớp
+      prisma.gymClass.findMany({
         where: { isActive: true },
         select: { id: true, name: true, plan: { select: { name: true } } }
       })
@@ -21,9 +25,11 @@ export async function getScheduleResources() {
   }
 }
 
-// 2. Lấy Lịch (Hỗ trợ lọc theo gymClassId)
+// 2. Lấy Lịch
 export async function getClassSessions(from: Date, to: Date, gymClassId?: string) {
   try {
+    await protect(['ADMIN', 'STAFF', 'TRAINER']); // 🔒
+
     const whereCondition: Prisma.ClassSessionWhereInput = {
       startTime: { gte: from },
       endTime: { lte: to },
@@ -35,7 +41,7 @@ export async function getClassSessions(from: Date, to: Date, gymClassId?: string
     const sessions = await prisma.classSession.findMany({
       where: whereCondition,
       include: {
-        gymClass: { select: { name: true, plan: { select: { name: true } } } }, // Include sâu hơn
+        gymClass: { select: { name: true, plan: { select: { name: true } } } },
         trainer: { select: { name: true } },
         room: { select: { name: true } },
         _count: { select: { bookings: true } }
@@ -43,10 +49,9 @@ export async function getClassSessions(from: Date, to: Date, gymClassId?: string
       orderBy: { startTime: 'asc' }
     });
     
-    // Map về format Calendar
     const events = sessions.map(s => ({
       id: s.id,
-      title: `${s.gymClass.name} (${s.trainer?.name || 'No Trainer'})`, // Hiển thị tên Lớp
+      title: `${s.gymClass.name} (${s.trainer?.name || 'No Trainer'})`,
       start: s.startTime,
       end: s.endTime,
       resource: {
@@ -64,7 +69,7 @@ export async function getClassSessions(from: Date, to: Date, gymClassId?: string
 
 // 3. Tạo Lịch (Bulk Create)
 export async function createClassSchedule(data: {
-  gymClassId: string; // 👉 Dùng gymClassId
+  gymClassId: string;
   trainerId: string;
   roomId: string;
   startTime: string; 
@@ -75,6 +80,8 @@ export async function createClassSchedule(data: {
   repeatDays: number[];
 }) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const sessionsToCreate = [];
     let currentDate = new Date(data.startDate);
@@ -88,7 +95,7 @@ export async function createClassSchedule(data: {
         const sessionEnd = new Date(sessionStart.getTime() + data.durationMinutes * 60000);
 
         sessionsToCreate.push({
-          gymClassId: data.gymClassId, // 👉 Link vào GymClass
+          gymClassId: data.gymClassId,
           trainerId: data.trainerId,
           roomId: data.roomId,
           startTime: sessionStart,
@@ -110,9 +117,11 @@ export async function createClassSchedule(data: {
   }
 }
 
-// 4. Hủy buổi học (giữ nguyên)
+// 4. Hủy buổi học
 export async function cancelSession(sessionId: string) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     await prisma.classSession.update({ where: { id: sessionId }, data: { isCanceled: true } });
     revalidatePath('/admin/schedule');
     return { success: true, message: "Đã hủy." };

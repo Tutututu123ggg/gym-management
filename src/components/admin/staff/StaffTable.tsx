@@ -83,7 +83,7 @@ export default function StaffTable({ staffList, edits, loading, savingId, onInpu
                          {/* BONUS */}
                          <td className="p-4">
                             <div className="relative">
-                               <DollarSign size={14} className="absolute left-2.5 top-2.5 text-slate-400"/>
+                               <div className="absolute left-2.5 top-2 text-slate-400 font-bold text-sm">đ</div>
                                <input type="number" className="input-std w-32 pl-8 h-9 font-medium" placeholder="0" value={bonusVal} onChange={(e) => onInputChange(staff.id, 'bonus', e.target.value)} />
                             </div>
                             <div className="text-[10px] text-slate-400 mt-1 pl-1 font-mono">{formatCurrency(Number(bonusVal))}</div>

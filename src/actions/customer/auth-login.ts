@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma';
 import { AuthService } from '@/services/customer/auth.service';
+import { cookies } from 'next/headers';
+import { SignJWT } from 'jose';
 
 const authService = new AuthService(prisma);
 
@@ -21,7 +23,15 @@ export async function registerUserAction(formData: FormData) {
   }
 }
 
-// --- LOGIN ACTION ---
+async function signToken(payload: any) {
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('1d') // Token sống 1 ngày
+    .sign(secret);
+}
+
 export async function loginUserAction(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -30,12 +40,29 @@ export async function loginUserAction(formData: FormData) {
 
   try {
     const user = await authService.login({ email, password });
+    
+    // 1. Tạo JWT chứa Role và ID
+    const token = await signToken({ 
+      role: user.role, 
+      userId: user.id 
+    });
+
+    // 2. Lưu JWT vào Cookie (HttpOnly) -> User không sửa được cái này
+    cookies().set('access_token', token, { 
+      httpOnly: true, 
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 86400 // 1 ngày
+    });
+    
+    // Xóa cookie user_role cũ đi cho an toàn (nếu có)
+    cookies().delete('user_role');
+
     return { success: true, message: "Đăng nhập thành công!", user };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi đăng nhập." };
   }
 }
-
 // --- VERIFY ACTION (Giữ nguyên) ---
 export async function verifyEmailTokenAction(token: string) {
   try {

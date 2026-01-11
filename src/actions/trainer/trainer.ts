@@ -3,6 +3,7 @@
 // ⚠️ Đảm bảo đường dẫn này trỏ đúng tới file service ở trên
 import { TrainerService } from "@/services/trainer/trainer.service"; 
 import { revalidatePath } from "next/cache";
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 const trainerService = new TrainerService();
 
@@ -10,6 +11,12 @@ const trainerService = new TrainerService();
 
 export async function getTrainerDashboardAction(userId: string) {
   try {
+    const user = await protect(['TRAINER', 'ADMIN']); // 🔒
+    // Admin được xem tất cả, Trainer chỉ xem của mình
+    if (user.role !== 'ADMIN' && user.id !== userId) {
+      return { success: false, message: "Unauthorized" };
+    }
+
     if (!userId) return { success: false, message: "User ID is required" };
 
     const data = await trainerService.getDashboardData(userId);
@@ -23,6 +30,9 @@ export async function getTrainerDashboardAction(userId: string) {
 
 export async function toggleTrainerCheckInAction(userId: string) {
   try {
+    const user = await protect(['TRAINER', 'ADMIN']); // 🔒
+    if (user.role !== 'ADMIN' && user.id !== userId) return { success: false, message: "Unauthorized" };
+
     if (!userId) return { success: false, message: "User ID is required" };
 
     const result = await trainerService.toggleCheckIn(userId);
@@ -37,6 +47,9 @@ export async function toggleTrainerCheckInAction(userId: string) {
 
 export async function getTrainerScheduleAction(userId: string, filter: 'upcoming' | 'history' = 'upcoming') {
   try {
+    const user = await protect(['TRAINER', 'ADMIN']); // 🔒
+    if (user.role !== 'ADMIN' && user.id !== userId) return { success: false, data: [] };
+
     const classes = await trainerService.getUpcomingClasses(userId, 20, filter); 
     return { success: true, data: JSON.parse(JSON.stringify(classes)) };
   } catch (error) {
@@ -49,6 +62,9 @@ export async function getTrainerScheduleAction(userId: string, filter: 'upcoming
 
 export async function getTrainerCoursesAction(trainerId: string) {
   try {
+    const user = await protect(['TRAINER', 'ADMIN']); // 🔒
+    if (user.role !== 'ADMIN' && user.id !== trainerId) return { success: false, data: [] };
+
     const courses = await trainerService.getTrainerCourses(trainerId);
     return { success: true, data: JSON.parse(JSON.stringify(courses)) };
   } catch (error) {
@@ -59,6 +75,9 @@ export async function getTrainerCoursesAction(trainerId: string) {
 
 export async function getStudentsInCourseAction(trainerId: string, gymClassId: string) {
   try {
+    const user = await protect(['TRAINER', 'ADMIN']); // 🔒
+    if (user.role !== 'ADMIN' && user.id !== trainerId) return { success: false, data: [] };
+
     const students = await trainerService.getStudentsInCourse(trainerId, gymClassId);
     return { success: true, data: JSON.parse(JSON.stringify(students)) };
   } catch (error) {
@@ -69,6 +88,9 @@ export async function getStudentsInCourseAction(trainerId: string, gymClassId: s
 
 export async function getStudentProgressAction(studentId: string) {
   try {
+    await protect(['TRAINER', 'ADMIN']); // 🔒 Trainer được xem progress của học viên
+    // (Có thể thêm logic check xem Trainer có dạy studentId này không nếu muốn chặt chẽ hơn)
+
     const progress = await trainerService.getStudentProgress(studentId);
     return { success: true, data: JSON.parse(JSON.stringify(progress)) };
   } catch (error) {

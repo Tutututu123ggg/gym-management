@@ -2,15 +2,21 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 // Tạo thông báo mới
 export async function createAnnouncement(userId: string, title: string, content: string) {
   try {
+    const user = await protect(['ADMIN', 'STAFF']); // 🔒
+
+    // [Optional] Đảm bảo người tạo là người đang login
+    if (user.id !== userId) return { success: false, message: "Không đúng thông tin người gửi" };
+
     await prisma.announcement.create({
       data: {
         title,
         content,
-        authorId: userId,
+        authorId: user.id, // Dùng ID thật từ token cho an toàn
         isActive: true
       }
     });
@@ -26,6 +32,8 @@ export async function createAnnouncement(userId: string, title: string, content:
 // Xóa thông báo
 export async function deleteAnnouncement(id: string) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     await prisma.announcement.delete({ where: { id } });
     revalidatePath("/admin/dashboard");
     revalidatePath("/staff/home");

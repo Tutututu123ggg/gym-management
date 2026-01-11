@@ -2,10 +2,13 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 // Lấy danh sách các buổi học sắp tới của một Plan
 export async function getPlanSessions(planId: string) {
   try {
+    await protect([]); // 🔒 Đã đăng nhập là xem được (Member/Staff/...)
+    
     const sessions = await prisma.classSession.findMany({
       where: {
         gymClass: {
@@ -44,6 +47,9 @@ export async function getPlanSessions(planId: string) {
 // Thực hiện đặt chỗ
 export async function bookSession(userId: string, sessionId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Không có quyền thực hiện" };
+
     // 1. Kiểm tra xem user có gói Active cho buổi học này không
     const session = await prisma.classSession.findUnique({
       where: { id: sessionId },

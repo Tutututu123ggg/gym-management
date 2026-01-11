@@ -2,13 +2,12 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
-/**
- * 1. Lấy danh sách lớp theo gói (Plan)
- *    👉 KHÔNG dùng Prisma.GetPayload để tránh lỗi build trên Vercel
- */
 export async function getGymClassesByPlan(planId: string) {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const classes = await prisma.gymClass.findMany({
       where: { planId },
       include: {
@@ -24,18 +23,13 @@ export async function getGymClassesByPlan(planId: string) {
   }
 }
 
-/**
- * 2. Type an toàn – suy ra trực tiếp từ function
- *    👉 Không phụ thuộc Prisma Client generate
- */
 export type GymClassWithStats =
   Awaited<ReturnType<typeof getGymClassesByPlan>>["data"][number];
 
-/**
- * 3. Tạo lớp mới
- */
 export async function createGymClass(planId: string, name: string) {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await prisma.gymClass.create({
       data: {
         planId,
@@ -52,11 +46,10 @@ export async function createGymClass(planId: string, name: string) {
   }
 }
 
-/**
- * 4. Xóa lớp
- */
 export async function deleteGymClass(classId: string) {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     const futureSessions = await prisma.classSession.count({
       where: {
         gymClassId: classId,

@@ -7,6 +7,7 @@ import {
   isSameDay, isSameMonth 
 } from "date-fns";
 import { DashboardStats, ChartDataPoint, RecentTransaction } from "@/types/admin/dashboard";
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 // --- LAYER 1: DATA ACCESS (Repository Pattern) ---
 // Hàm này chỉ chịu trách nhiệm giao tiếp với Database, không xử lý logic hiển thị
@@ -43,7 +44,6 @@ async function fetchRawData(startDate: Date, endDate: Date) {
 }
 
 // --- LAYER 2: DATA TRANSFORMATION (Service Logic) ---
-// Hàm này thuần túy xử lý logic biến đổi dữ liệu, không gọi DB
 function processChartData(
   invoices: { amount: number; createdAt: Date }[], 
   year: number, 
@@ -77,8 +77,9 @@ function processChartData(
 }
 
 // --- LAYER 3: CONTROLLER (Main Entry Point) ---
-// Hàm này điều phối: Gọi Data Access -> Gọi Transformation -> Trả về kết quả
 export async function getDashboardStats(year: number, month?: number): Promise<DashboardStats> {
+  await protect(['ADMIN', 'STAFF']); // 🔒 Chặn
+
   // 1. Chuẩn bị tham số thời gian
   const startDate = month ? startOfMonth(new Date(year, month - 1)) : startOfYear(new Date(year, 0));
   const endDate = month ? endOfMonth(new Date(year, month - 1)) : endOfYear(new Date(year, 11));
@@ -94,7 +95,6 @@ export async function getDashboardStats(year: number, month?: number): Promise<D
   ] = await fetchRawData(startDate, endDate);
 
   // 3. Mapping Type an toàn (Adapter)
-  // Lưu ý: Cần đảm bảo select trong fetchRawData khớp với Interface RecentTransaction
   const recentTransactions = recentTransactionsRaw as unknown as RecentTransaction[];
 
   // 4. Trả về kết quả cuối cùng

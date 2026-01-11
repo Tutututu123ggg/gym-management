@@ -4,11 +4,15 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { CustomerFeedbackService } from '@/services/customer/customer-feedback.service';
 import { SendFeedbackInput, FeedbackResponse } from '@/types/customer/customer-feedback';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 const feedbackService = new CustomerFeedbackService(prisma);
 
 export async function sendFeedbackAction(userId: string, data: SendFeedbackInput): Promise<FeedbackResponse> {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, message: "Unauthorized" };
+
     if (!data.title || !data.message) {
       return { success: false, message: "Vui lòng nhập đầy đủ tiêu đề và nội dung." };
     }
@@ -24,6 +28,9 @@ export async function sendFeedbackAction(userId: string, data: SendFeedbackInput
 
 export async function getMyFeedbacksAction(userId: string) {
   try {
+    const user = await protect(['MEMBER']); // 🔒
+    if (user.id !== userId) return { success: false, data: [] };
+
     const data = await feedbackService.getByUserId(userId);
     return { success: true, data };
   } catch (error) {

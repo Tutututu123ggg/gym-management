@@ -1,11 +1,11 @@
 'use server';
 
-import prisma from '@/lib/prisma'; // Singleton thật được import ở đây
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { FeedbackService } from '@/services/admin/feedback.service';
 import { FeedbackFilterStatus, FeedbackResponse } from '@/types/admin/feedback';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
-// "WIRING": Khởi tạo Service với Dependency cụ thể
 const feedbackService = new FeedbackService(prisma);
 
 export async function getFeedbacks(
@@ -13,6 +13,8 @@ export async function getFeedbacks(
   page: number = 1
 ): Promise<FeedbackResponse> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const limit = 10;
     const result = await feedbackService.getAll(filter, page, limit);
 
@@ -37,8 +39,10 @@ export async function replyFeedback(id: string, replyText: string): Promise<Feed
     return { success: false, message: 'Nội dung trả lời không được để trống.' };
   }
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     await feedbackService.reply(id, replyText);
-    revalidatePath('/admin/feedback'); // Framework specific logic ở Action
+    revalidatePath('/admin/feedback');
     return { success: true, message: 'Đã gửi câu trả lời thành công!' };
   } catch (error) {
     console.error('Reply Feedback Error:', error);
@@ -48,6 +52,8 @@ export async function replyFeedback(id: string, replyText: string): Promise<Feed
 
 export async function deleteFeedback(id: string): Promise<FeedbackResponse> {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await feedbackService.delete(id);
     revalidatePath('/admin/feedback');
     return { success: true, message: 'Đã xóa phản hồi.' };

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { loginUserAction, registerUserAction } from '@/actions/admin/auth';
+import { loginUserAction, registerUserAction } from '@/actions/customer/auth-login';
 
 export function useAuthForm(onClose: () => void) {
   const router = useRouter();

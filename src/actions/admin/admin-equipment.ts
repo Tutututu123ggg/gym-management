@@ -5,15 +5,18 @@ import { revalidatePath } from "next/cache";
 import { EquipmentService } from '@/services/admin/equipment.service';
 import { EquipmentStatus } from '@prisma/client';
 import { EquipmentResponse, PaginatedResult } from '@/types/admin/equipment';
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
-// DI: Inject Prisma vào Service
 const equipmentService = new EquipmentService(prisma);
 
 // --- FETCH ACTIONS ---
 
 export async function getInitialData() {
-  const rooms = await equipmentService.getRooms();
-  return rooms;
+  try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+    const rooms = await equipmentService.getRooms();
+    return rooms;
+  } catch (error) { return [] }
 }
 
 export async function getEquipmentsAction(
@@ -24,6 +27,8 @@ export async function getEquipmentsAction(
 ): Promise<PaginatedResult> {
   const limit = 10;
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const { total, data } = await equipmentService.getAll(roomId, status, searchTerm, page, limit);
     return {
       data,
@@ -38,13 +43,18 @@ export async function getEquipmentsAction(
 }
 
 export async function getCategoriesByRoomAction(roomId: string) {
-  return await equipmentService.getCategoriesByRoom(roomId);
+  try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+    return await equipmentService.getCategoriesByRoom(roomId);
+  } catch (error) { return [] }
 }
 
 // --- MUTATION ACTIONS ---
 
 export async function createEquipmentAction(data: any): Promise<EquipmentResponse> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     await equipmentService.create(data);
     revalidatePath('/admin/equipment');
     return { success: true, message: "Thêm thiết bị thành công!" };
@@ -55,6 +65,8 @@ export async function createEquipmentAction(data: any): Promise<EquipmentRespons
 
 export async function updateEquipmentAction(id: string, data: any): Promise<EquipmentResponse> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     await equipmentService.update(id, data);
     revalidatePath('/admin/equipment');
     return { success: true, message: "Cập nhật thành công!" };
@@ -65,6 +77,8 @@ export async function updateEquipmentAction(id: string, data: any): Promise<Equi
 
 export async function deleteEquipmentAction(id: string): Promise<EquipmentResponse> {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await equipmentService.delete(id);
     revalidatePath('/admin/equipment');
     return { success: true, message: "Đã xóa thiết bị." };
@@ -75,6 +89,8 @@ export async function deleteEquipmentAction(id: string): Promise<EquipmentRespon
 
 export async function createCategoryAction(roomId: string, name: string): Promise<EquipmentResponse> {
   try {
+    await protect(['ADMIN', 'STAFF']); // 🔒
+
     const data = await equipmentService.createQuickCategory(roomId, name);
     return { success: true, message: "Đã thêm loại mới!", data };
   } catch (error: any) {
@@ -84,6 +100,8 @@ export async function createCategoryAction(roomId: string, name: string): Promis
 
 export async function deleteCategoryAction(categoryId: string): Promise<EquipmentResponse> {
   try {
+    await protect(['ADMIN']); // 🔒 CHỈ ADMIN
+
     await equipmentService.deleteQuickCategory(categoryId);
     return { success: true, message: "Đã xóa loại thiết bị." };
   } catch (error: any) {

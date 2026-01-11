@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { verifyEmailTokenAction } from '@/actions/admin/auth';
+import { verifyEmailTokenAction } from '@/actions/customer/auth-login';
 
 export function useVerifyEmail() {
   const searchParams = useSearchParams();

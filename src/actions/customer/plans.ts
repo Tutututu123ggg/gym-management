@@ -1,20 +1,20 @@
 'use server'
 
 import prisma  from '@/lib/prisma'
+import { protect } from '@/lib/auth-guard'; // [NEW]
 
 export async function getPlans() {
   try {
+    await protect([]); // 🔒 Yêu cầu đăng nhập mới xem được gói
+
     const plans = await prisma.plan.findMany({
       orderBy: {
         price: 'asc', 
       },
-      // --- THÊM ĐOẠN NÀY ---
       include: {
-        promotions: true, // <--- BẮT BUỘC: Lấy kèm danh sách khuyến mãi
-        // Nếu bạn muốn hiển thị số người đang đăng ký (cái chấm xanh), thêm dòng dưới:
+        promotions: true, 
         // _count: { select: { subscriptions: true } } 
       }
-      // ---------------------
     });
     return plans;
   } catch (error) {
