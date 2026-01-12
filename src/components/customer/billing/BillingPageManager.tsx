@@ -10,16 +10,18 @@ import BillingSubscriptions from './components/BillingSubscriptions';
 import BillingPaymentMethods from './components/BillingPaymentMethods';
 import BillingHistory from './components/BillingHistory';
 import PaymentModal from './components/PaymentModal';
-import BookingModal from './components/BookingModal'; // Import Modal mới
+import BookingModal from './components/BookingModal';
+import { Icons } from './components/Shared'; // Giả sử Icons được export từ đây
 
 export default function BillingPageManager() {
   const router = useRouter();
   const { data, isLoggedIn, actions } = useBilling();
   
+  // STATE: Tabs management
+  const [activeTab, setActiveTab] = useState<'services' | 'wallet'>('services');
+
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedCard, setSelectedCard] = useState<string>('');
-  
-  // STATE MỚI: Quản lý việc hiển thị modal đăng ký lớp
   const [bookingSub, setBookingSub] = useState<Subscription | null>(null);
 
   // Auto-select default card
@@ -36,42 +38,90 @@ export default function BillingPageManager() {
 
   if (!isLoggedIn) return null;
 
+  // Render nội dung dựa trên Tab đang chọn
+  const renderContent = () => {
+    if (activeTab === 'services') {
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* Nhóm 1: Thanh toán hóa đơn & Đăng ký lớp */}
+          <BillingInvoices 
+              invoices={data.invoices} 
+              onPay={setSelectedInvoice} 
+              onCancel={actions.cancelSub}
+          />
+          <BillingSubscriptions 
+              subscriptions={data.subscriptions} 
+              onRenew={actions.renewManual} 
+              onCancel={actions.cancelSub} 
+              onToggleAutoRenew={actions.toggleAutoRenew}
+              onBookClass={(sub) => setBookingSub(sub)}
+          />
+        </div>
+      );
+    }
+
+    if (activeTab === 'wallet') {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+           {/* Nhóm 2: Phương thức thanh toán & Lịch sử */}
+           {/* Cột trái (hoặc trên): Quản lý thẻ */}
+           <div>
+              <BillingPaymentMethods 
+                  methods={data.paymentMethods} 
+                  selectedId={selectedCard} 
+                  onSelect={setSelectedCard} 
+                  onAdd={actions.addCard} 
+                  onRemove={actions.removeCard}
+              />
+           </div>
+           
+           {/* Cột phải (hoặc dưới): Lịch sử */}
+           <div>
+              <BillingHistory invoices={data.invoices} />
+           </div>
+        </div>
+      );
+    }
+  };
+
   return (
-    <div className="p-6 space-y-8 bg-slate-50 dark:bg-background min-h-screen text-foreground relative">
-      <h1 className="text-2xl font-bold">💳 Quản lý Thanh toán & Dịch vụ</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* CỘT TRÁI */}
-        <div className="space-y-6">
-            <BillingInvoices 
-                invoices={data.invoices} 
-                onPay={setSelectedInvoice} 
-                onCancel={actions.cancelSub}
-            />
-            <BillingSubscriptions 
-                subscriptions={data.subscriptions} 
-                onRenew={actions.renewManual} 
-                onCancel={actions.cancelSub} 
-                onToggleAutoRenew={actions.toggleAutoRenew}
-                // Truyền hàm mở modal
-                onBookClass={(sub) => setBookingSub(sub)}
-            />
-        </div>
-
-        {/* CỘT PHẢI */}
-        <div className="space-y-6">
-            <BillingPaymentMethods 
-                methods={data.paymentMethods} 
-                selectedId={selectedCard} 
-                onSelect={setSelectedCard} 
-                onAdd={actions.addCard} 
-                onRemove={actions.removeCard}
-            />
-            <BillingHistory invoices={data.invoices} />
-        </div>
+    <div className="p-6 space-y-6 bg-slate-50 dark:bg-background min-h-screen text-foreground relative">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            💳 Quản lý Dịch vụ
+          </h1>
+          
+          {/* NAVIGATION TABS */}
+          <div className="bg-white dark:bg-card p-1 rounded-xl border border-gray-200 dark:border-gray-800 flex shadow-sm w-full md:w-auto">
+            <button 
+                onClick={() => setActiveTab('services')}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                    activeTab === 'services' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+            >
+                Gói & Đăng ký
+            </button>
+            <button 
+                onClick={() => setActiveTab('wallet')}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                    activeTab === 'wallet' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+            >
+                Ví & Lịch sử
+            </button>
+          </div>
       </div>
 
-      {/* MODAL THANH TOÁN (Cũ) */}
+      {/* MAIN CONTENT AREA */}
+      <div className="min-h-[500px]">
+          {renderContent()}
+      </div>
+
+      {/* GLOBAL MODALS - Đặt ở ngoài để luôn sẵn sàng */}
       {selectedInvoice && (
         <PaymentModal 
             invoice={selectedInvoice} 
@@ -83,7 +133,6 @@ export default function BillingPageManager() {
         />
       )}
 
-      {/* MODAL ĐĂNG KÝ LỊCH (Mới) */}
       {bookingSub && (
         <BookingModal 
             planId={bookingSub.plan.id}
